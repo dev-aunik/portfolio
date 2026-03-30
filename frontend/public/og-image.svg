@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0a0a0a"/>
+  <!-- Subtle grid lines -->
+  <line x1="0" y1="315" x2="1200" y2="315" stroke="#1f1f1f" stroke-width="1"/>
+  <line x1="600" y1="0" x2="600" y2="630" stroke="#1f1f1f" stroke-width="1"/>
+  <!-- Indigo accent bar -->
+  <rect x="100" y="200" width="4" height="120" fill="#6366f1" rx="2"/>
+  <!-- Name -->
+  <text x="124" y="258" font-family="system-ui, -apple-system, sans-serif" font-size="56"
+        font-weight="700" fill="#e4e4e7" letter-spacing="-1.5">Mehedi Hasan</text>
+  <!-- Role -->
+  <text x="124" y="310" font-family="system-ui, -apple-system, sans-serif" font-size="26"
+        font-weight="400" fill="#a1a1aa" letter-spacing="-0.3">Senior Backend Engineer</text>
+  <!-- Tech stack -->
+  <text x="124" y="355" font-family="system-ui, -apple-system, sans-serif" font-size="20"
+        font-weight="400" fill="#52525b">Go · PostgreSQL · Redis · RabbitMQ · Docker</text>
+  <!-- Domain -->
+  <text x="124" y="440" font-family="system-ui, -apple-system, sans-serif" font-size="18"
+        font-weight="500" fill="#6366f1">mehedi.dev</text>
+  <!-- Bottom accent bar -->
+  <rect x="0" y="618" width="1200" height="4" fill="#6366f1" rx="2"/>
+</svg>
