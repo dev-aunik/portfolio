@@ -11,9 +11,7 @@ export interface Article {
 export interface ArticleListResult {
     articles: Article[]; total: number; page: number; total_pages: number;
 }
-export interface SearchResult {
-    hits: Article[]; total_hits: number; page: number; total_pages: number;
-}
+
 export interface ContactPayload {
     name: string; email: string; subject: string; message: string;
 }
@@ -30,9 +28,9 @@ export class ApiService {
     getArticle(slug: string): Observable<Article> {
         return this.http.get<Article>(`${this.base}/articles/${slug}`);
     }
-    searchArticles(query: string, page = 1): Observable<SearchResult> {
+    searchArticles(query: string, page = 1): Observable<ArticleListResult> {
         const params = new HttpParams().set('q', query).set('page', page);
-        return this.http.get<SearchResult>(`${this.base}/articles/search`, { params });
+        return this.http.get<ArticleListResult>(`${this.base}/articles/search`, { params });
     }
     submitContact(data: ContactPayload): Observable<{ message: string }> {
         return this.http.post<{ message: string }>(`${this.base}/contact`, data);

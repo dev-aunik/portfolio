@@ -8,8 +8,6 @@ Personal portfolio and blog built with Go and Angular.
 - **Backend:** Go 1.22 (Chi Router, Clean Architecture)
 - **Database:** PostgreSQL (sqlc)
 - **Caching & Sessions:** Redis
-- **Search:** Typesense
-- **Messaging:** RabbitMQ & Kafka
 
 ## Getting Started
 
@@ -27,7 +25,7 @@ cp .env.example .env
 ```
 Update `.env` with your desired configuration if needed.
 
-2. Start the infrastructure services (Postgres, Redis, Typesense, RabbitMQ, Kafka):
+2. Start the infrastructure services (Postgres, Redis):
 ```bash
 docker compose up -d
 ```

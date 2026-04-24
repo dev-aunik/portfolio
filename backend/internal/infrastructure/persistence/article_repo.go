@@ -62,6 +62,45 @@ func (r *ArticleRepo) FindAll(ctx context.Context, page, limit int) ([]*article.
 	return articles, total, nil
 }
 
+// Search returns a paginated list of published articles matching a query, newest first.
+func (r *ArticleRepo) Search(ctx context.Context, query string, page, limit int) ([]*article.Article, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+	searchQuery := "%" + query + "%"
+
+	// Count total published matching
+	var total int64
+	err := r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM articles WHERE published_at IS NOT NULL AND published_at <= NOW() AND (title ILIKE $1 OR content ILIKE $1)`, searchQuery).
+		Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("articles: search count: %w", err)
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT id, title, slug, summary, content, tags, published_at, created_at, updated_at
+		FROM articles
+		WHERE published_at IS NOT NULL AND published_at <= NOW() AND (title ILIKE $1 OR content ILIKE $1)
+		ORDER BY published_at DESC
+		LIMIT $2 OFFSET $3
+	`, searchQuery, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("articles: search: %w", err)
+	}
+	defer rows.Close()
+
+	articles, err := scanArticles(rows)
+	if err != nil {
+		return nil, 0, err
+	}
+	return articles, total, nil
+}
+
 // FindBySlug retrieves a single published article by slug.
 func (r *ArticleRepo) FindBySlug(ctx context.Context, slug string) (*article.Article, error) {
 	row := r.db.QueryRow(ctx, `

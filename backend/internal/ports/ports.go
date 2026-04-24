@@ -15,6 +15,9 @@ type ArticleRepository interface {
 	// FindAll returns a paginated list of published articles along with the total count.
 	FindAll(ctx context.Context, page, limit int) ([]*article.Article, int64, error)
 
+	// Search returns a paginated list of published articles matching a query along with total count.
+	Search(ctx context.Context, query string, page, limit int) ([]*article.Article, int64, error)
+
 	// FindBySlug retrieves a single article by its URL slug.
 	FindBySlug(ctx context.Context, slug string) (*article.Article, error)
 
@@ -46,35 +49,6 @@ type Cache interface {
 	Exists(ctx context.Context, key string) (bool, error)
 }
 
-// SearchEngine defines the full-text search contract (backed by Typesense).
-type SearchEngine interface {
-	// IndexArticle adds or updates an article document in the search index.
-	IndexArticle(ctx context.Context, a *article.Article) error
-
-	// SearchArticles performs a full-text search and returns matching articles.
-	SearchArticles(ctx context.Context, query string, page, limit int) (*SearchResult, error)
-
-	// DeleteArticle removes an article document from the search index.
-	DeleteArticle(ctx context.Context, id string) error
-}
-
-// SearchResult holds paginated search results.
-type SearchResult struct {
-	Hits       []*article.Article `json:"hits"`
-	TotalHits  int64              `json:"total_hits"`
-	Page       int                `json:"page"`
-	TotalPages int                `json:"total_pages"`
-}
-
-// MessageBus defines the async messaging contract.
-// Backed by RabbitMQ for contact submissions, Kafka for audit events.
-type MessageBus interface {
-	// Publish sends a message payload to the given topic/routing key.
-	Publish(ctx context.Context, topic string, payload []byte) error
-
-	// Close gracefully shuts down the connection.
-	Close() error
-}
 
 // ContactRepository defines the persistence contract for contact submissions.
 type ContactRepository interface {

@@ -22,8 +22,6 @@ const (
 type Service struct {
 	repo        ports.ArticleRepository
 	cache       ports.Cache
-	search      ports.SearchEngine
-	bus         ports.MessageBus
 	articlesTTL time.Duration
 	articleTTL  time.Duration
 }
@@ -32,15 +30,11 @@ type Service struct {
 func NewService(
 	repo ports.ArticleRepository,
 	cache ports.Cache,
-	search ports.SearchEngine,
-	bus ports.MessageBus,
 	articlesTTL, articleTTL time.Duration,
 ) *Service {
 	return &Service{
 		repo:        repo,
 		cache:       cache,
-		search:      search,
-		bus:         bus,
 		articlesTTL: articlesTTL,
 		articleTTL:  articleTTL,
 	}
@@ -106,12 +100,23 @@ func (s *Service) GetBySlug(ctx context.Context, slug string) (*article.Article,
 	return a, nil
 }
 
-// Search performs a Typesense-backed full-text search.
-func (s *Service) Search(ctx context.Context, query string, page, limit int) (*ports.SearchResult, error) {
+// Search performs a DB-backed basic full-text search.
+func (s *Service) Search(ctx context.Context, query string, page, limit int) (*ListResult, error) {
 	if query == "" {
-		return &ports.SearchResult{}, nil
+		return &ListResult{}, nil
 	}
-	return s.search.SearchArticles(ctx, query, page, limit)
+	articles, total, err := s.repo.Search(ctx, query, page, limit)
+	if err != nil {
+		return nil, fmt.Errorf("article.service: search: %w", err)
+	}
+
+	totalPages := int((total + int64(limit) - 1) / int64(limit))
+	return &ListResult{
+		Articles:   articles,
+		Total:      total,
+		Page:       page,
+		TotalPages: totalPages,
+	}, nil
 }
 
 // CreateInput holds the input for creating a new article.
@@ -142,11 +147,6 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*article.Article,
 		return nil, err
 	}
 
-	if a.IsPublished() {
-		_ = s.search.IndexArticle(ctx, a)
-	}
-
-	s.publishAudit(ctx, "article.created", a.ID.String())
 	return a, nil
 }
 
@@ -188,13 +188,6 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (*article.Article,
 	)
 	s.invalidateListCache(ctx)
 
-	if a.IsPublished() {
-		_ = s.search.IndexArticle(ctx, a)
-	} else {
-		_ = s.search.DeleteArticle(ctx, a.ID.String())
-	}
-
-	s.publishAudit(ctx, "article.updated", a.ID.String())
 	return a, nil
 }
 
@@ -214,8 +207,6 @@ func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
 
 	_ = s.cache.Delete(ctx, fmt.Sprintf(cacheKeyArticle, a.Slug))
 	s.invalidateListCache(ctx)
-	_ = s.search.DeleteArticle(ctx, id.String())
-	s.publishAudit(ctx, "article.deleted", id.String())
 	return nil
 }
 
@@ -228,14 +219,3 @@ func (s *Service) invalidateListCache(ctx context.Context) {
 	}
 }
 
-func (s *Service) publishAudit(ctx context.Context, event, id string) {
-	if s.bus == nil {
-		return
-	}
-	payload, _ := json.Marshal(map[string]string{
-		"event": event,
-		"id":    id,
-		"ts":    time.Now().UTC().Format(time.RFC3339),
-	})
-	_ = s.bus.Publish(ctx, "audit", payload)
-}

@@ -3,9 +3,7 @@ package contact
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/aunik/portfolio/internal/domain/contact"
 	"github.com/aunik/portfolio/internal/ports"
@@ -14,12 +12,11 @@ import (
 // Service orchestrates contact form use cases.
 type Service struct {
 	repo ports.ContactRepository
-	bus  ports.MessageBus
 }
 
 // NewService creates a new contact Service.
-func NewService(repo ports.ContactRepository, bus ports.MessageBus) *Service {
-	return &Service{repo: repo, bus: bus}
+func NewService(repo ports.ContactRepository) *Service {
+	return &Service{repo: repo}
 }
 
 // SubmitInput holds the raw form input from the HTTP layer.
@@ -49,21 +46,7 @@ func (s *Service) Submit(ctx context.Context, in SubmitInput) error {
 		fmt.Printf("contact.service: persist failed: %v\n", err)
 	}
 
-	// Publish to RabbitMQ for async processing (email notification, CRM, etc.)
-	if s.bus != nil {
-		payload, _ := json.Marshal(map[string]string{
-			"id":      c.ID.String(),
-			"name":    c.Name,
-			"email":   c.Email,
-			"subject": c.Subject,
-			"message": c.Message,
-			"ts":      time.Now().UTC().Format(time.RFC3339),
-		})
-		if err := s.bus.Publish(ctx, "contact.new", payload); err != nil {
-			// Log failure but still return success — submission is already saved
-			fmt.Printf("contact.service: enqueue failed: %v\n", err)
-		}
-	}
+
 
 	return nil
 }

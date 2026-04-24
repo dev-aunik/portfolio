@@ -28,8 +28,8 @@ export class ThemeService {
     }
 
     #loadTheme(): Theme {
-        if (!isPlatformBrowser(inject(PLATFORM_ID))) return 'dark';
+        if (!isPlatformBrowser(inject(PLATFORM_ID))) return 'light';
         const saved = localStorage.getItem(this.storageKey) as Theme | null;
-        return saved ?? 'dark';
+        return saved ?? 'light';
     }
 }

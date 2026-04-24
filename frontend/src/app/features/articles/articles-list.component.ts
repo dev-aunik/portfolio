@@ -109,7 +109,7 @@ export class ArticlesListComponent implements OnInit {
         this.seo.set({ title: 'Articles', description: 'Technical writing on Go, distributed systems, Kafka, Redis, and backend architecture.' });
         this.load(1);
         this.s$.pipe(debounceTime(350), switchMap(q => q.length > 1 ? this.api.searchArticles(q) : of(null))).subscribe(res => {
-            if (res) { this.articles.set(res.hits ?? []); } else if (!this.q) { this.load(1); }
+            if (res) { this.articles.set(res.articles ?? []); } else if (!this.q) { this.load(1); }
             this.loading.set(false);
         });
     }

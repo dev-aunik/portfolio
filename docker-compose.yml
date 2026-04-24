@@ -7,11 +7,6 @@ networks:
 volumes:
   postgres_data:
   redis_data:
-  typesense_data:
-  rabbitmq_data:
-  redpanda_data:
-
-
 services:
   # Database
   postgres:
@@ -52,93 +47,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Search
-  typesense:
-    image: typesense/typesense:0.25.2
-    container_name: portfolio_typesense
-    restart: unless-stopped
-    environment:
-      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY:-typesense_secret}
-      TYPESENSE_DATA_DIR: /data
-    volumes:
-      - typesense_data:/data
-    ports:
-      - "8108:8108"
-    networks:
-      - portfolio_net
-    healthcheck:
-      test: [ "CMD", "bash", "-c", "</dev/tcp/localhost/8108" ]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-
-  # Message Queue
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: portfolio_rabbitmq
-    restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbitmq_secret}
-      RABBITMQ_DEFAULT_VHOST: portfolio
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    ports:
-      - "5672:5672" # AMQP
-      - "15672:15672" # Management UI
-    networks:
-      - portfolio_net
-    healthcheck:
-      test: [ "CMD", "rabbitmq-diagnostics", "check_port_connectivity" ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-
-  # Event Streaming (Kafka-compatible)
-  redpanda:
-    image: redpandadata/redpanda:v23.3.11
-    container_name: portfolio_redpanda
-    restart: unless-stopped
-    command:
-      - redpanda
-      - start
-      - --smp=1
-      - --memory=512M
-      - --reserve-memory=0M
-      - --overprovisioned
-      - --node-id=0
-      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
-      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
-      - --pandaproxy-addr=0.0.0.0:8082
-      - --advertise-pandaproxy-addr=localhost:8082
-    volumes:
-      - redpanda_data:/var/lib/redpanda/data
-    ports:
-      - "9092:9092" # Kafka API
-      - "8082:8082" # Pandaproxy (REST)
-      - "9644:9644" # Admin API
-    networks:
-      - portfolio_net
-    healthcheck:
-      test: [ "CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1" ]
-      interval: 20s
-      timeout: 10s
-      retries: 5
-
-  # Redpanda Console
-  redpanda_console:
-    image: redpandadata/console:v2.4.6
-    container_name: portfolio_redpanda_console
-    restart: unless-stopped
-    environment:
-      KAFKA_BROKERS: redpanda:9092
-    ports:
-      - "8083:8080"
-    networks:
-      - portfolio_net
-    depends_on:
-      - redpanda
-
   # DB Admin UI
   adminer:
     image: adminer:4
@@ -165,9 +73,6 @@ services:
       - DATABASE_URL=postgres://portfolio:portfolio_secret@postgres:5432/portfolio?sslmode=disable
       - REDIS_HOST=redis
       - REDIS_URL=redis://:redis_secret@redis:6379/0
-      - TYPESENSE_HOST=typesense
-      - RABBITMQ_URL=amqp://admin:rabbitmq_secret@rabbitmq:5672/portfolio
-      - KAFKA_BROKERS=redpanda:9092
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:
@@ -180,13 +85,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      typesense:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      redpanda:
-        condition: service_started
-
   # Frontend
   frontend:
     build:

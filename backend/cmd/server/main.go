@@ -15,9 +15,7 @@ import (
 	"github.com/aunik/portfolio/internal/infrastructure/cache"
 	httpinfra "github.com/aunik/portfolio/internal/infrastructure/http"
 	"github.com/aunik/portfolio/internal/infrastructure/http/handlers"
-	"github.com/aunik/portfolio/internal/infrastructure/messaging"
 	"github.com/aunik/portfolio/internal/infrastructure/persistence"
-	"github.com/aunik/portfolio/internal/infrastructure/search"
 	"github.com/aunik/portfolio/pkg/config"
 	"github.com/aunik/portfolio/pkg/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -58,40 +56,6 @@ func main() {
 	defer redisCache.Close()
 	log.Info().Str("host", cfg.Redis.Host).Msg("redis connected")
 
-	// ─── Search ────────────────────────────────────────────────────────────
-	searchEngine, err := search.New(
-		cfg.Typesense.Host,
-		cfg.Typesense.Port,
-		cfg.Typesense.Protocol,
-		cfg.Typesense.APIKey,
-		cfg.Typesense.Collection,
-	)
-	if err != nil {
-		log.Warn().Err(err).Msg("typesense unavailable — search disabled")
-		searchEngine = nil
-	} else {
-		log.Info().Str("host", cfg.Typesense.Host).Msg("typesense connected")
-	}
-
-	// ─── Messaging (RabbitMQ) ──────────────────────────────────────────────
-	rabbitBus, err := messaging.NewRabbitMQ(cfg.RabbitMQ.URL, cfg.RabbitMQ.Exchange, cfg.RabbitMQ.QueueContact)
-	if err != nil {
-		log.Warn().Err(err).Msg("rabbitmq unavailable — contact queueing disabled")
-		rabbitBus = nil
-	} else {
-		log.Info().Str("url", cfg.RabbitMQ.URL).Msg("rabbitmq connected")
-		defer rabbitBus.Close()
-	}
-
-	// ─── Messaging (Kafka/Redpanda — audit log) ────────────────────────────
-	kafkaBus, err := messaging.NewKafka(cfg.Kafka.Brokers, cfg.Kafka.TopicAudit)
-	if err != nil {
-		log.Warn().Err(err).Msg("kafka unavailable — audit log disabled")
-		kafkaBus = nil
-	} else {
-		log.Info().Strs("brokers", cfg.Kafka.Brokers).Msg("kafka connected")
-		defer kafkaBus.Close()
-	}
 
 	// ─── Repositories ─────────────────────────────────────────────────────
 	articleRepo := persistence.NewArticleRepo(dbPool)
@@ -101,12 +65,10 @@ func main() {
 	articleSvc := articleapp.NewService(
 		articleRepo,
 		redisCache,
-		searchEngine,
-		kafkaBus,
 		cfg.Redis.ArticlesTTL,
 		cfg.Redis.ArticleTTL,
 	)
-	contactSvc := contactapp.NewService(contactRepo, rabbitBus)
+	contactSvc := contactapp.NewService(contactRepo)
 
 	// ─── HTTP Handlers ─────────────────────────────────────────────────────
 	articleH := handlers.NewArticleHandler(articleSvc)
