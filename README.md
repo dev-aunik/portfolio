@@ -57,3 +57,7 @@ The web app runs on `http://localhost:4200`.
 cd backend
 migrate -path migrations -database "$DATABASE_URL" up
 ```
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
