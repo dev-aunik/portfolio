@@ -58,6 +58,13 @@ cd backend
 migrate -path migrations -database "$DATABASE_URL" up
 ```
 
+## Deployment Notes
+
+- Keep production secrets outside the repository.
+- Run database migrations before starting a new backend release.
+- Use separate environment files for local, staging, and production deployments.
+- Check backend and frontend health after deployment.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
